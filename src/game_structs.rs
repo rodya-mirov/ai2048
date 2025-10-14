@@ -29,8 +29,12 @@ pub enum MoveError {
 }
 
 impl<const N: usize> GameState<N> {
+    pub fn new_empty() -> Self {
+        Self { grid: [[0; N]; N] }
+    }
+
     pub fn new_random<R: AddRandomPiece<Self>>(r: &mut R) -> Self {
-        let out = Self { grid: [[0; N]; N] };
+        let out = Self::new_empty();
         r.next_piece(&out)
     }
 
@@ -300,7 +304,7 @@ impl<const N: usize> AddRandomPiece<GameState<N>> for RngPlacement {
             }
         }
 
-        let (y, x) = free_spaces[self.rng.random_range(0..free_spaces.len())];
+        let (x, y) = free_spaces[self.rng.random_range(0..free_spaces.len())];
 
         let is_two = self.rng.random_bool(0.5);
 

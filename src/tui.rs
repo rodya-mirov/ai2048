@@ -12,7 +12,7 @@ use crossterm::{
 use std::io;
 use std::io::Write;
 
-pub fn render<const N: usize>(game: &GameState<N>) -> io::Result<()> {
+pub fn render<const N: usize>(old_state: &GameState<N>, game: &GameState<N>) -> io::Result<()> {
     let mut stdout = io::stdout();
     execute!(
         stdout,
@@ -20,37 +20,41 @@ pub fn render<const N: usize>(game: &GameState<N>) -> io::Result<()> {
         cursor::MoveTo(0, 0)
     )?;
 
-    for y in 0..N {
-        for x in 0..N {
-            let val = game.get_val(x, y);
-            let color = match val {
-                0 => Color::DarkGrey,
-                2 => Color::Grey,
-                4 => Color::White,
-                8 => Color::Yellow,
-                16 => Color::DarkYellow,
-                32 => Color::Magenta,
-                64 => Color::Red,
-                128 => Color::Blue,
-                256 => Color::Cyan,
-                512 => Color::Green,
-                _ => Color::White,
-            };
-            execute!(
-                stdout,
-                SetBackgroundColor(Color::Black),
-                SetForegroundColor(color),
-                Print(format!(
-                    "|{:>6}|",
-                    if val == 0 {
-                        ".".to_string()
-                    } else {
-                        val.to_string()
-                    }
-                )),
-                ResetColor,
-            )?;
+    for game in [old_state, game] {
+        for y in 0..N {
+            for x in 0..N {
+                let val = game.get_val(x, y);
+                let color = match val {
+                    0 => Color::DarkGrey,
+                    2 => Color::Grey,
+                    4 => Color::White,
+                    8 => Color::Yellow,
+                    16 => Color::DarkYellow,
+                    32 => Color::Magenta,
+                    64 => Color::Red,
+                    128 => Color::Blue,
+                    256 => Color::Cyan,
+                    512 => Color::Green,
+                    _ => Color::White,
+                };
+                execute!(
+                    stdout,
+                    SetBackgroundColor(Color::Black),
+                    SetForegroundColor(color),
+                    Print(format!(
+                        "|{:>6}|",
+                        if val == 0 {
+                            ".".to_string()
+                        } else {
+                            val.to_string()
+                        }
+                    )),
+                    ResetColor,
+                )?;
+            }
+            execute!(stdout, Print("\r\n"))?;
         }
+        
         execute!(stdout, Print("\r\n"))?;
     }
 

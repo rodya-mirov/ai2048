@@ -1,4 +1,4 @@
-use crate::game_structs::{GameState, Move};
+use crate::game_structs::{GameState, Move, RngPlacement};
 use crate::game_traits::{AddRandomPiece, FullGame};
 
 /// Test fixture helper which allows movement with no additional placement afterward
@@ -227,6 +227,35 @@ fn test_move_left_crowded_d() {
             [16, 8, 0, 0, 0, 0],
             [2, 4, 8, 16, 32, 64],
         ],
+    };
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_move_left_observed() {
+    let mut rng = NoPlacement {};
+
+    #[rustfmt::skip]
+    let start = GameState {
+        grid: [
+            [0, 0, 0, 0],
+            [0, 0, 4, 4],
+            [0, 0, 0, 8],
+            [0, 0, 16, 2],
+        ]
+    };
+
+    let actual = start.apply_move(Move::Left, &mut rng).unwrap();
+
+    #[rustfmt::skip]
+    let expected = GameState {
+        grid: [
+            [0, 0, 0, 0],
+            [8, 0, 0, 0],
+            [8, 0, 0, 0],
+            [16, 2, 0, 0],
+        ]
     };
 
     assert_eq!(actual, expected);
@@ -545,4 +574,48 @@ fn test_move_down_crowded_d() {
     };
 
     assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_prng_pieces_on_new_places_only() {
+    // uses system random; this test is non-deterministic by design
+    let mut rng = RngPlacement::new();
+
+    // A big enough grid that "most of the time," the overwrite bug I originally noticed
+    // will be triggered at least once
+    const N: usize = 20;
+
+    let mut state: GameState<N> = GameState::new_random(&mut rng);
+
+    while !state.is_finished() {
+        let old_state = state.clone();
+        state = rng.next_piece(&state);
+
+        // check that if a square is occupied in old, it's the same value in new
+        for y in 0 .. N {
+            for x in 0 .. N {
+                let old_val = old_state.get_val(x, y);
+                let new_val = state.get_val(x, y);
+
+                if old_val != 0 {
+                    assert_eq!(old_val, new_val, "Existing values should not be changed");
+                }
+            }
+        }
+
+        // check that exactly one new value is occupied in new, and it's a 2 or 4
+        let mut new_count = 0;
+        for y in 0 .. N {
+            for x in 0 .. N {
+                let old_val = old_state.get_val(x, y);
+                let new_val = state.get_val(x, y);
+
+                if old_val == 0 && new_val != 0 {
+                    new_count += 1;
+                    assert!(new_val == 2 || new_val == 4);
+                }
+            }
+        }
+        assert_eq!(new_count, 1);
+    }
 }
