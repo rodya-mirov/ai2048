@@ -65,8 +65,11 @@ pub fn render<const N: usize>(game: &GameState<N>) -> io::Result<()> {
     Ok(())
 }
 
-pub fn play<const N: usize>() -> io::Result<()> {
-    let mut rng = RngPlacement::new();
+pub fn play<const N: usize>(seed: Option<u64>) -> io::Result<()> {
+    let mut rng = match seed {
+        Some(seed) => RngPlacement::new_from_seed(seed),
+        None => RngPlacement::new()
+    };
     let mut game = GameState::<4>::new_random(&mut rng);
 
     // prepare terminal
