@@ -80,6 +80,50 @@ fn crowded_grid_a() -> GameState<4> {
     out
 }
 
+fn crowded_grid_b() -> GameState<4> {
+    #[rustfmt::skip]
+    let out = GameState {
+        grid: [
+            [2, 0, 2, 2],    // merge + shift test
+            [0, 4, 4, 0],    // merge in middle
+            [8, 0, 0, 8],    // two far-apart merges possible
+            [16, 8, 8, 8],   // only one merge allowed (8+8 once)
+        ],
+    };
+
+    out
+}
+
+fn crowded_grid_c() -> GameState<4> {
+    #[rustfmt::skip]
+    let out = GameState {
+        grid: [
+            [2,  4,  8,  2],
+            [2,  4,  8,  2],
+            [4,  8, 16,  4],
+            [4,  0,  0,  4],
+        ],
+    };
+
+    out
+}
+
+fn crowded_grid_d() -> GameState<6> {
+    #[rustfmt::skip]
+    let out = GameState {
+        grid: [
+            [2,  2,  4,  8,  0,  0],
+            [0,  4,  4,  0,  2,  2],
+            [8, 16,  0,  0,  0,  8],
+            [8, 16, 16,  8,  4,  4],
+            [0,  0,  8,  8,  8,  0],
+            [2,  4,  8, 16, 32, 64],
+        ],
+    };
+
+    out
+}
+
 #[test]
 fn test_move_left_boring() {
     let mut rng = NoPlacement {};
@@ -88,6 +132,7 @@ fn test_move_left_boring() {
 
     let actual = start.apply_move(Move::Left, &mut rng).unwrap();
 
+    #[rustfmt::skip]
     let expected = GameState {
         grid: [
             [0, 0, 0, 0, 0],
@@ -102,15 +147,86 @@ fn test_move_left_boring() {
 }
 
 #[test]
-fn test_move_left_crowded() {
+fn test_move_left_crowded_a() {
     let mut rng = NoPlacement {};
 
     let start = crowded_grid_a();
 
     let actual = start.apply_move(Move::Left, &mut rng).unwrap();
 
+    #[rustfmt::skip]
     let expected = GameState {
-        grid: [[4, 4, 0, 0], [4, 2, 0, 0], [8, 8, 4, 0], [16, 4, 8, 4]],
+        grid: [
+            [4, 4, 0, 0],
+            [4, 2, 0, 0],
+            [8, 8, 4, 0],
+            [16, 4, 8, 4]
+        ],
+    };
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_move_left_crowded_b() {
+    let mut rng = NoPlacement {};
+
+    let start = crowded_grid_b();
+
+    let actual = start.apply_move(Move::Left, &mut rng).unwrap();
+
+    #[rustfmt::skip]
+    let expected = GameState {
+        grid: [
+            [4, 2, 0, 0],
+            [8, 0, 0, 0],
+            [16, 0, 0, 0],
+            [16, 16, 8, 0]
+        ],
+    };
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_move_left_crowded_c() {
+    let mut rng = NoPlacement {};
+
+    let start = crowded_grid_c();
+
+    let actual = start.apply_move(Move::Left, &mut rng).unwrap();
+
+    #[rustfmt::skip]
+    let expected = GameState {
+        grid: [
+            [2, 4, 8, 2],
+            [2, 4, 8, 2],
+            [4, 8, 16, 4],
+            [8, 0, 0, 0],
+        ],
+    };
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_move_left_crowded_d() {
+    let mut rng = NoPlacement {};
+
+    let start = crowded_grid_d();
+
+    let actual = start.apply_move(Move::Left, &mut rng).unwrap();
+
+    #[rustfmt::skip]
+    let expected = GameState {
+        grid: [
+            [4, 4, 8, 0, 0, 0],
+            [8, 4, 0, 0, 0, 0],
+            [8, 16, 8, 0, 0, 0],
+            [8, 32, 8, 8, 0, 0],
+            [16, 8, 0, 0, 0, 0],
+            [2, 4, 8, 16, 32, 64],
+        ],
     };
 
     assert_eq!(actual, expected);
@@ -124,6 +240,7 @@ fn test_move_right_boring() {
 
     let actual = start.apply_move(Move::Right, &mut rng).unwrap();
 
+    #[rustfmt::skip]
     let expected = GameState {
         grid: [
             [0, 0, 0, 0, 0],
@@ -138,14 +255,82 @@ fn test_move_right_boring() {
 }
 
 #[test]
-fn test_move_right_crowded() {
+fn test_move_right_crowded_a() {
     let mut rng = NoPlacement {};
 
     let start = crowded_grid_a();
     let actual = start.apply_move(Move::Right, &mut rng).unwrap();
 
+    #[rustfmt::skip]
     let expected = GameState {
-        grid: [[0, 0, 4, 4], [0, 0, 2, 4], [0, 8, 4, 8], [16, 4, 8, 4]],
+        grid: [
+            [0, 0, 4, 4],
+            [0, 0, 2, 4],
+            [0, 8, 4, 8],
+            [16, 4, 8, 4]
+        ],
+    };
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_move_right_crowded_b() {
+    let mut rng = NoPlacement {};
+
+    let start = crowded_grid_b();
+    let actual = start.apply_move(Move::Right, &mut rng).unwrap();
+
+    #[rustfmt::skip]
+    let expected = GameState {
+        grid: [
+            [0, 0, 2, 4],
+            [0, 0, 0, 8],
+            [0, 0, 0, 16],
+            [0, 16, 8, 16],
+        ],
+    };
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_move_right_crowded_c() {
+    let mut rng = NoPlacement {};
+
+    let start = crowded_grid_c();
+    let actual = start.apply_move(Move::Right, &mut rng).unwrap();
+
+    #[rustfmt::skip]
+    let expected = GameState {
+        grid: [
+            [2, 4, 8, 2],
+            [2, 4, 8, 2],
+            [4, 8, 16, 4],
+            [0, 0, 0, 8],
+        ],
+    };
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_move_right_crowded_d() {
+    let mut rng = NoPlacement {};
+
+    let start = crowded_grid_d();
+    let actual = start.apply_move(Move::Right, &mut rng).unwrap();
+
+    #[rustfmt::skip]
+    let expected = GameState {
+        grid: [
+            [0, 0, 0, 4, 4, 8],
+            [0, 0, 0, 0, 8, 4],
+            [0, 0, 0, 8, 16, 8],
+            [0, 0, 8, 32, 8, 8],
+            [0, 0, 0, 0, 8, 16],
+            [2, 4, 8, 16, 32, 64],
+        ],
     };
 
     assert_eq!(actual, expected);
@@ -174,7 +359,7 @@ fn test_move_up_boring() {
 }
 
 #[test]
-fn test_move_up_crowded() {
+fn test_move_up_crowded_a() {
     let mut rng = FirstPlaceFours {};
 
     let start = crowded_grid_a();
@@ -188,6 +373,71 @@ fn test_move_up_crowded() {
             [8, 8, 4, 4],
             [16, 4, 8, 0],
             [0, 0, 0, 0]
+        ],
+    };
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_move_up_crowded_b() {
+    let mut rng = NoPlacement {};
+
+    let start = crowded_grid_b();
+
+    let actual = start.apply_move(Move::Up, &mut rng).unwrap();
+
+    #[rustfmt::skip]
+    let expected = GameState {
+        grid: [
+            [2, 4, 2, 2],
+            [8, 8, 4, 16],
+            [16, 0, 8, 0],
+            [0, 0, 0, 0],
+        ],
+    };
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_move_up_crowded_c() {
+    let mut rng = NoPlacement {};
+
+    let start = crowded_grid_c();
+
+    let actual = start.apply_move(Move::Up, &mut rng).unwrap();
+
+    #[rustfmt::skip]
+    let expected = GameState {
+        grid: [
+            [4, 8, 16, 4],
+            [8, 8, 16, 8],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+        ],
+    };
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_move_up_crowded_d() {
+    let mut rng = NoPlacement {};
+
+    let start = crowded_grid_d();
+
+    let actual = start.apply_move(Move::Up, &mut rng).unwrap();
+
+    #[rustfmt::skip]
+    let expected = GameState {
+        grid: [
+            [2, 2, 8, 16, 2, 2],
+            [16, 4, 16, 8, 4, 8],
+            [2, 32, 16, 16, 8, 4],
+            [0, 4, 0, 0, 32, 64],
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
         ],
     };
 
@@ -216,7 +466,7 @@ fn test_move_down_boring() {
 }
 
 #[test]
-fn test_move_down_crowded() {
+fn test_move_down_crowded_a() {
     let mut rng = FirstPlaceFours {};
 
     let start = crowded_grid_a();
@@ -229,6 +479,68 @@ fn test_move_down_crowded() {
             [4, 0, 2, 0],
             [8, 4, 4, 4],
             [16, 8, 8, 8]
+        ],
+    };
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_move_down_crowded_b() {
+    let mut rng = NoPlacement {};
+
+    let start = crowded_grid_b();
+    let actual = start.apply_move(Move::Down, &mut rng).unwrap();
+
+    #[rustfmt::skip]
+    let expected = GameState {
+        grid: [
+            [0, 0, 0, 0],
+            [2, 0, 2, 0],
+            [8, 4, 4, 2],
+            [16, 8, 8, 16],
+        ],
+    };
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_move_down_crowded_c() {
+    let mut rng = NoPlacement {};
+
+    let start = crowded_grid_c();
+    let actual = start.apply_move(Move::Down, &mut rng).unwrap();
+
+    #[rustfmt::skip]
+    let expected = GameState {
+        grid: [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [4, 8, 16, 4],
+            [8, 8, 16, 8],
+        ],
+    };
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_move_down_crowded_d() {
+    let mut rng = NoPlacement {};
+
+    let start = crowded_grid_d();
+    let actual = start.apply_move(Move::Down, &mut rng).unwrap();
+
+    #[rustfmt::skip]
+    let expected = GameState {
+        grid: [
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+            [0, 2, 0, 0, 2, 2],
+            [2, 4, 8, 8, 4, 8],
+            [16, 32, 16, 16, 8, 4],
+            [2, 4, 16, 16, 32, 64],
         ],
     };
 

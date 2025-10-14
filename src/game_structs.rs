@@ -29,6 +29,16 @@ pub enum MoveError {
 }
 
 impl<const N: usize> GameState<N> {
+    pub fn new_random<R: AddRandomPiece<Self>>(r: &mut R) -> Self {
+        let out = Self { grid: [[0; N]; N] };
+        r.next_piece(&out)
+    }
+
+    #[inline(always)]
+    pub fn get_val(&self, x: usize, y: usize) -> u32 {
+        self.grid[y][x]
+    }
+
     fn left(&self) -> Self {
         let mut out = *self;
 
