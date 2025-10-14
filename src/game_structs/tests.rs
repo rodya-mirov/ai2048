@@ -67,9 +67,17 @@ fn boring_grid() -> GameState<5> {
 }
 
 fn crowded_grid_a() -> GameState<4> {
-    GameState {
-        grid: [[2, 2, 0, 4], [2, 2, 2, 0], [8, 4, 4, 4], [16, 4, 8, 4]],
-    }
+    #[rustfmt::skip]
+    let out = GameState {
+        grid: [
+            [2, 2, 0, 4],
+            [2, 2, 2, 0],
+            [8, 4, 4, 4],
+            [16, 4, 8, 4]
+        ],
+    };
+
+    out
 }
 
 #[test]
@@ -137,12 +145,7 @@ fn test_move_right_crowded() {
     let actual = start.apply_move(Move::Right, &mut rng).unwrap();
 
     let expected = GameState {
-        grid: [
-            [0, 0, 4, 4],
-            [0, 0, 2, 4],
-            [0, 8, 4, 8],
-            [16, 4, 8, 4],
-        ]
+        grid: [[0, 0, 4, 4], [0, 0, 2, 4], [0, 8, 4, 8], [16, 4, 8, 4]],
     };
 
     assert_eq!(actual, expected);
@@ -150,15 +153,16 @@ fn test_move_right_crowded() {
 
 #[test]
 fn test_move_up_boring() {
-    let mut rng = NoPlacement {};
+    let mut rng = FirstPlaceTwos {};
 
     let start = boring_grid();
 
     let actual = start.apply_move(Move::Up, &mut rng).unwrap();
 
+    #[rustfmt::skip]
     let expected = GameState {
         grid: [
-            [0, 0, 2, 0, 0],
+            [2, 0, 2, 0, 0],
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
@@ -171,19 +175,20 @@ fn test_move_up_boring() {
 
 #[test]
 fn test_move_up_crowded() {
-    let mut rng = NoPlacement {};
+    let mut rng = FirstPlaceFours {};
 
     let start = crowded_grid_a();
 
     let actual = start.apply_move(Move::Up, &mut rng).unwrap();
 
+    #[rustfmt::skip]
     let expected = GameState {
         grid: [
             [4, 4, 2, 8],
             [8, 8, 4, 4],
-            [16, 0, 8, 0],
-            [0, 0, 0, 0],
-        ]
+            [16, 4, 8, 0],
+            [0, 0, 0, 0]
+        ],
     };
 
     assert_eq!(actual, expected);
@@ -191,7 +196,7 @@ fn test_move_up_crowded() {
 
 #[test]
 fn test_move_down_boring() {
-    let mut rng = NoPlacement {};
+    let mut rng = FirstPlaceTwos {};
 
     let start = boring_grid();
 
@@ -199,7 +204,7 @@ fn test_move_down_boring() {
 
     let expected = GameState {
         grid: [
-            [0, 0, 0, 0, 0],
+            [2, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
@@ -212,18 +217,19 @@ fn test_move_down_boring() {
 
 #[test]
 fn test_move_down_crowded() {
-    let mut rng = NoPlacement {};
+    let mut rng = FirstPlaceFours {};
 
     let start = crowded_grid_a();
     let actual = start.apply_move(Move::Down, &mut rng).unwrap();
 
+    #[rustfmt::skip]
     let expected = GameState {
         grid: [
-            [0, 0, 0, 0],
+            [4, 0, 0, 0],
             [4, 0, 2, 0],
             [8, 4, 4, 4],
-            [16, 8, 8, 8],
-        ]
+            [16, 8, 8, 8]
+        ],
     };
 
     assert_eq!(actual, expected);

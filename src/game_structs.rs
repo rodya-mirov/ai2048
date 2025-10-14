@@ -1,3 +1,6 @@
+// This really is what I want, clippy, get off my back
+#![allow(clippy::needless_range_loop)]
+
 use crate::game_traits::{AddRandomPiece, FullGame};
 use rand::{Rng, SeedableRng};
 
@@ -34,10 +37,10 @@ impl<const N: usize> GameState<N> {
         // earlier.
         let mut merge_limits: [usize; N] = [0; N];
 
-        for y in 0 .. N {
+        for y in 0..N {
             // from left to right, attempt to move each piece left until it can't anymore,
             // except that you cannot merge the same square more than once
-            for x in 1 .. N {
+            for x in 1..N {
                 let val = out.grid[y][x];
                 if val == 0 {
                     continue;
@@ -84,10 +87,10 @@ impl<const N: usize> GameState<N> {
         // earlier.
         let mut merge_limits: [usize; N] = [0; N];
 
-        for x in 0 .. N {
+        for x in 0..N {
             // from top to bottom, attempt to move each piece upward until it can't anymore,
             // except that you cannot merge the same square more than once
-            for y in 1 .. N {
+            for y in 1..N {
                 let val = out.grid[y][x];
                 if val == 0 {
                     continue;
@@ -99,10 +102,10 @@ impl<const N: usize> GameState<N> {
                 loop {
                     if out.grid[new_y][x] == 0 {
                         out.grid[new_y][x] = val;
-                        out.grid[new_y+1][x] = 0;
+                        out.grid[new_y + 1][x] = 0;
                     } else if out.grid[new_y][x] == val {
                         out.grid[new_y][x] = val << 1;
-                        out.grid[new_y+1][x] = 0;
+                        out.grid[new_y + 1][x] = 0;
                         merge_limits[x] = new_y + 1;
                         break;
                     } else {
@@ -130,12 +133,12 @@ impl<const N: usize> GameState<N> {
         // (indexed by y, output is an x-value) -- cannot merge in a row twice in the same space,
         // so this tracks the last merge point, if any. Merges can happen at this point but not
         // earlier.
-        let mut merge_limits: [usize; N] = [N-1; N];
+        let mut merge_limits: [usize; N] = [N - 1; N];
 
-        for y in 0 .. N {
+        for y in 0..N {
             // from right to left, attempt to move each piece right until it can't anymore,
             // except that you cannot merge the same square more than once
-            for x in (0 .. N-1).rev() {
+            for x in (0..N - 1).rev() {
                 let val = out.grid[y][x];
                 if val == 0 {
                     continue;
@@ -180,12 +183,12 @@ impl<const N: usize> GameState<N> {
         // (indexed by x, output is a y-value) -- cannot merge in a column twice in the same space,
         // so this tracks the last merge point, if any. Merges can happen at this point but not
         // earlier.
-        let mut merge_limits: [usize; N] = [N-1; N];
+        let mut merge_limits: [usize; N] = [N - 1; N];
 
-        for x in 0 .. N {
+        for x in 0..N {
             // from bottom to top, attempt to move each piece downward until it can't anymore,
             // except that you cannot merge the same square more than once
-            for y in (0 .. N-1).rev() {
+            for y in (0..N - 1).rev() {
                 let val = out.grid[y][x];
                 if val == 0 {
                     continue;
@@ -197,10 +200,10 @@ impl<const N: usize> GameState<N> {
                 loop {
                     if out.grid[new_y][x] == 0 {
                         out.grid[new_y][x] = val;
-                        out.grid[new_y-1][x] = 0;
+                        out.grid[new_y - 1][x] = 0;
                     } else if out.grid[new_y][x] == val {
                         out.grid[new_y][x] = val << 1;
-                        out.grid[new_y-1][x] = 0;
+                        out.grid[new_y - 1][x] = 0;
                         merge_limits[x] = new_y - 1;
                         break;
                     } else {
@@ -229,7 +232,7 @@ impl<const N: usize> FullGame for GameState<N> {
         m: Move,
         r: &mut R,
     ) -> Result<GameState<N>, MoveError> {
-        let mut next_state = self.clone();
+        let mut next_state = *self;
 
         next_state = match m {
             Move::Up => next_state.up(),
@@ -291,7 +294,7 @@ impl<const N: usize> AddRandomPiece<GameState<N>> for RngPlacement {
 
         let is_two = self.rng.random_bool(0.5);
 
-        let mut out_state = in_state.clone();
+        let mut out_state = *in_state;
         out_state.grid[y][x] = if is_two { 2 } else { 4 };
 
         out_state
