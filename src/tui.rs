@@ -2,8 +2,9 @@
 //!
 //! Note this is more or less completely AI-generated because I don't care very much about this
 //! part of the project.
-use crate::game_structs::GameState;
+use crate::game_structs::{GameState, Move, RngPlacement};
 use crate::game_traits::FullGame;
+use crossterm::event::{Event, KeyCode};
 use crossterm::{
     cursor, execute,
     style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
@@ -11,6 +12,7 @@ use crossterm::{
 };
 use std::io;
 use std::io::Write;
+use std::time::Duration;
 
 pub fn render<const N: usize>(game: &GameState<N>) -> io::Result<()> {
     let mut stdout = io::stdout();
@@ -59,6 +61,57 @@ pub fn render<const N: usize>(game: &GameState<N>) -> io::Result<()> {
         Print(format!("\nScore: {}\n", game.current_score()))
     )?;
     stdout.flush()?;
+
+    Ok(())
+}
+
+pub fn play<const N: usize>() -> io::Result<()> {
+    let mut rng = RngPlacement::new();
+    let mut game = GameState::<4>::new_random(&mut rng);
+
+    // prepare terminal
+    terminal::enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(
+        stdout,
+        terminal::EnterAlternateScreen,
+        cursor::Hide
+    )?;
+
+    render(&game)?;
+
+    loop {
+        if crossterm::event::poll(Duration::from_millis(100))?
+            && let Event::Key(key) = crossterm::event::read()? {
+                let mv = match key.code {
+                    KeyCode::Char('q') => break, // quit
+                    KeyCode::Up | KeyCode::Char('w') => Some(Move::Up),
+                    KeyCode::Down | KeyCode::Char('s') => Some(Move::Down),
+                    KeyCode::Left | KeyCode::Char('a') => Some(Move::Left),
+                    KeyCode::Right | KeyCode::Char('d') => Some(Move::Right),
+                    _ => None,
+                };
+
+                if let Some(mv) = mv {
+                    if let Ok(new_state) = game.apply_move(mv, &mut rng) {
+                        game = new_state;
+                    }
+                    render(&game)?;
+                    if game.is_finished() {
+                        execute!(stdout, Print("Game over!"))?;
+                        break;
+                    }
+                }
+            }
+    }
+
+    // cleanup
+    execute!(
+        stdout,
+        cursor::Show,
+        terminal::LeaveAlternateScreen
+    )?;
+    terminal::disable_raw_mode()?;
 
     Ok(())
 }
