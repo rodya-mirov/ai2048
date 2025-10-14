@@ -12,7 +12,7 @@ use crossterm::{
 use std::io;
 use std::io::Write;
 
-pub fn render<const N: usize>(old_state: &GameState<N>, game: &GameState<N>) -> io::Result<()> {
+pub fn render<const N: usize>(game: &GameState<N>) -> io::Result<()> {
     let mut stdout = io::stdout();
     execute!(
         stdout,
@@ -20,7 +20,6 @@ pub fn render<const N: usize>(old_state: &GameState<N>, game: &GameState<N>) -> 
         cursor::MoveTo(0, 0)
     )?;
 
-    for game in [old_state, game] {
         for y in 0..N {
             for x in 0..N {
                 let val = game.get_val(x, y);
@@ -54,9 +53,6 @@ pub fn render<const N: usize>(old_state: &GameState<N>, game: &GameState<N>) -> 
             }
             execute!(stdout, Print("\r\n"))?;
         }
-        
-        execute!(stdout, Print("\r\n"))?;
-    }
 
     execute!(
         stdout,

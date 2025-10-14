@@ -15,7 +15,6 @@ mod tui;
 fn main() -> io::Result<()> {
     let mut rng = RngPlacement::new();
     let mut game = GameState::<4>::new_random(&mut rng);
-    let mut old_state = game.clone();
 
     // prepare terminal
     terminal::enable_raw_mode()?;
@@ -26,7 +25,7 @@ fn main() -> io::Result<()> {
         crossterm::cursor::Hide
     )?;
 
-    tui::render(&old_state, &game)?;
+    tui::render(&game)?;
 
     loop {
         if crossterm::event::poll(Duration::from_millis(100))? {
@@ -43,12 +42,11 @@ fn main() -> io::Result<()> {
                 if let Some(mv) = mv {
                     match game.apply_move(mv, &mut rng) {
                         Ok(new_state) => {
-                            old_state = game;
                             game = new_state;
                         }
                         Err(_) => {} // ignore illegal moves
                     }
-                    tui::render(&old_state, &game)?;
+                    tui::render(&game)?;
                     if game.is_finished() {
                         execute!(stdout, crossterm::style::Print("Game over!"))?;
                         break;
