@@ -25,33 +25,10 @@ set -e
 
 echo "== Running pre-push checks ==="
 
-if [[ ${GIT_VENV} ]] ; then
-  echo "Activating venv at" "${GIT_VENV}/bin/activate"
-  source "${GIT_VENV}/bin/activate"
-  PYTHON_CMD="python"
-else
-  echo "Using base python3 for pre-commit script; to use a virtualenv, set the GIT_VENV variable"
-  echo "For instance, export GIT_VENV=venv; git commit -m \"feat: wip\""
-  PYTHON_CMD="python3"
-fi
-
 echo "Verifying code formatter"
 
 # Run rustfmt on the entire workspace
 cargo +nightly fmt --check --all
-
-echo "Verifying import sorting"
-if ! $PYTHON_CMD -m ruff check --select=I ; then
-  echo "Import sorting check failed; if it had strange errors, try installing dependencies locally. e.g.:"
-  echo ">" $PYTHON_CMD "-m pip install --upgrade -r dev_requirements.txt"
-  exit 1
-fi
-
-if ! $PYTHON_CMD -m ruff format --check ; then
-  echo "The linter failed; if it had strange errors, try installing dependencies locally. e.g.:"
-  echo ">" $PYTHON_CMD "-m pip install --upgrade -r dev_requirements.txt"
-  exit 1
-fi
 
 echo "Verifying code linter"
 
@@ -63,28 +40,4 @@ echo "Checking for unused dependencies"
 # Run udeps on the entire workspace
 cargo +nightly udeps --workspace
 
-# For now, we don't lint the jobs themselves, because there are a large number of Magic Variables inserted by the
-# spark runtime that ruff doesn't know about. We may address this at a later point.
-if ! $PYTHON_CMD -m ruff check verifier_tests ; then
-  echo "The linter failed; if it had strange errors, try installing dependencies locally. e.g.:"
-  echo ">" $PYTHON_CMD "-m pip install --upgrade -r dev_requirements.txt"
-  exit 1
-fi
-
 PATH=$PATH:/usr/local/bin:/usr/local/sbin
-
-# verifies the format of all java code based on the eclipse style file
-
-echo "Running spotlessCheck"
-trap 'echo "${output}"' EXIT
-output="$(./gradlew --configuration-cache spotlessCheck 2>&1)"
-if grep -q "Spotless JVM-local cache is stale" <<< "$output"; then
-  trap - EXIT
-  # https://github.com/diffplug/spotless/issues/987
-  echo "> Spotless JVM-local cache is stale. Cleaning Gradle configuration cache and rerunning Spotless..."
-  rm -rf .gradle/configuration-cache
-  ./gradlew --configuration-cache spotlessCheck
-else
-  echo "$output"
-  trap - EXIT
-fi

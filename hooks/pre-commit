@@ -31,64 +31,13 @@ echo "== Running pre-commit scripts ==="
 echo "Running code formatter (workspace)"
 cargo +nightly fmt --all
 
-if [[ ${GIT_VENV} ]] ; then
-  echo "Activating venv at" "${GIT_VENV}/bin/activate"
-  source "${GIT_VENV}/bin/activate"
-  PYTHON_CMD="python"
-else
-  echo "Using base python3 for pre-commit script; to use a virtualenv, set the GIT_VENV variable"
-  echo "For instance, export GIT_VENV=venv; git commit -m \"feat: wip\""
-  PYTHON_CMD="python3"
-fi
-
-echo "Running code formatter (import sorting)"
-if ! $PYTHON_CMD -m ruff check --select=I --fix ; then
-  echo "The linter failed; if it had strange errors, try installing dependencies locally. e.g.:"
-  echo ">" $PYTHON_CMD "-m pip install --upgrade -r dev_requirements.txt"
-  exit 1
-fi
-
-echo "Running code formatter"
-if ! $PYTHON_CMD -m ruff format ; then
-  echo "The linter failed; if it had strange errors, try installing dependencies locally. e.g.:"
-  echo ">" $PYTHON_CMD "-m pip install --upgrade -r dev_requirements.txt"
-  exit 1
-fi
-
 echo "Running code linter (does not block commit, but should be addressed before push)"
 cargo clippy --workspace --tests || true
 
 echo "Checking for unused dependencies (does not block commit, but should be addressed before push)"
 cargo +nightly udeps --workspace || true
 
-# For now, we don't lint the jobs themselves, because there are a large number of Magic Variables inserted by the
-# spark runtime that ruff doesn't know about. We may address this at a later point.
-$PYTHON_CMD -m ruff check verifier_tests || true
-
 PATH=$PATH:/usr/local/bin:/usr/local/sbin
-
-# formats any java code that is staged for commit according to the eclipse style file
-
-# list of all java files staged for commit
-files=$(git diff-index --diff-filter=d --cached --name-only HEAD | grep '.*\.java$' || echo '')
-
-# Only run the script if java files have changed
-if [ -n "${files}" ]; then
-  # Run spotlessApply using the Gradle configuration cache.
-  echo "Running spotlessApply"
-  trap 'echo "${output}"' EXIT
-  output="$(./gradlew --configuration-cache spotlessApply 2>&1)"
-  if grep -q "Spotless JVM-local cache is stale" <<< "$output"; then
-    trap - EXIT
-    # https://github.com/diffplug/spotless/issues/987
-    echo "> Spotless JVM-local cache is stale. Cleaning Gradle configuration cache and rerunning Spotless..."
-    rm -rf .gradle/configuration-cache
-    ./gradlew --configuration-cache spotlessApply
-  else
-    echo "$output"
-    trap - EXIT
-  fi
-fi
 
 if [ -n "$(git ls-files --modified)" ]; then
   git ls-files --modified | xargs -n 1 git add
