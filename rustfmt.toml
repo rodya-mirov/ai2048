@@ -1,0 +1,14 @@
+# Rust formatting configuration for the entire project
+# This ensures consistent import organization and code style
+
+# Favor longer lines over excessive line breaks
+max_width = 140
+
+# Import organization rules
+reorder_imports = true
+imports_granularity = "Item"
+group_imports = "StdExternalCrate"
+
+# Additional formatting rules
+newline_style = "Unix"
+use_small_heuristics = "Default"

@@ -1,4 +1,5 @@
-use crate::game_structs::{Move, MoveError};
+use crate::game_structs::Move;
+use crate::game_structs::MoveError;
 
 pub trait FullGame: Sized {
     /// Apply the move, then use an appropriate RNG to add the next square

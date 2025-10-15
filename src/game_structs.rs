@@ -1,8 +1,11 @@
 // This really is what I want, clippy, get off my back
 #![allow(clippy::needless_range_loop)]
 
-use crate::game_traits::{AddRandomPiece, FullGame};
-use rand::{Rng, SeedableRng};
+use rand::Rng;
+use rand::SeedableRng;
+
+use crate::game_traits::AddRandomPiece;
+use crate::game_traits::FullGame;
 
 #[cfg(test)]
 mod tests;
@@ -241,11 +244,7 @@ impl<const N: usize> GameState<N> {
 }
 
 impl<const N: usize> FullGame for GameState<N> {
-    fn apply_move<R: AddRandomPiece<GameState<N>>>(
-        &self,
-        m: Move,
-        r: &mut R,
-    ) -> Result<GameState<N>, MoveError> {
+    fn apply_move<R: AddRandomPiece<GameState<N>>>(&self, m: Move, r: &mut R) -> Result<GameState<N>, MoveError> {
         let mut next_state = *self;
 
         next_state = match m {
@@ -276,14 +275,18 @@ impl<const N: usize> FullGame for GameState<N> {
 
     // TODO: unit test
     fn is_finished(&self) -> bool {
-        self.grid
-            .iter()
-            .all(|row| row.iter().all(|&cell| cell != 0))
+        self.grid.iter().all(|row| row.iter().all(|&cell| cell != 0))
     }
 
     // TODO: unit test
     fn current_score(&self) -> u32 {
-        self.grid.iter().flat_map(|row| row.iter()).copied().filter(|&c| c > 0).map(|bits| 1_u32 << bits).sum()
+        self.grid
+            .iter()
+            .flat_map(|row| row.iter())
+            .copied()
+            .filter(|&c| c > 0)
+            .map(|bits| 1_u32 << bits)
+            .sum()
     }
 }
 

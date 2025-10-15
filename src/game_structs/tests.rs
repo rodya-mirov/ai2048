@@ -1,5 +1,8 @@
-use crate::game_structs::{GameState, Move, RngPlacement};
-use crate::game_traits::{AddRandomPiece, FullGame};
+use crate::game_structs::GameState;
+use crate::game_structs::Move;
+use crate::game_structs::RngPlacement;
+use crate::game_traits::AddRandomPiece;
+use crate::game_traits::FullGame;
 
 /// Test fixture helper which allows movement with no additional placement afterward
 struct NoPlacement {}
@@ -56,13 +59,7 @@ impl<const N: usize> AddRandomPiece<GameState<N>> for FirstPlaceFours {
 
 fn boring_grid() -> GameState<5> {
     GameState {
-        grid: [
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 2, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-        ],
+        grid: [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 2, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]],
     }
 }
 
@@ -453,13 +450,7 @@ fn test_move_down_boring() {
     let actual = start.apply_move(Move::Down, &mut rng).unwrap();
 
     let expected = GameState {
-        grid: [
-            [1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 2, 0, 0],
-        ],
+        grid: [[1, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 2, 0, 0]],
     };
 
     assert_eq!(actual, expected);
@@ -563,8 +554,8 @@ fn test_prng_pieces_on_new_places_only() {
         state = rng.next_piece(&state);
 
         // check that if a square is occupied in old, it's the same value in new
-        for y in 0 .. N {
-            for x in 0 .. N {
+        for y in 0..N {
+            for x in 0..N {
                 let old_val = old_state.get_val(x, y);
                 let new_val = state.get_val(x, y);
 
@@ -576,8 +567,8 @@ fn test_prng_pieces_on_new_places_only() {
 
         // check that exactly one new value is occupied in new, and it's a 2 or 4
         let mut new_count = 0;
-        for y in 0 .. N {
-            for x in 0 .. N {
+        for y in 0..N {
+            for x in 0..N {
                 let old_val = old_state.get_val(x, y);
                 let new_val = state.get_val(x, y);
 

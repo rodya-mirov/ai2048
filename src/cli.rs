@@ -1,12 +1,10 @@
 //! Clap CLI for dispatching what we're gonna do
 
-use clap::{Parser, Subcommand};
+use clap::Parser;
+use clap::Subcommand;
 
 #[derive(Parser, Debug)]
-#[command(
-    version,
-    about = "2048 AI Playground",
-)]
+#[command(version, about = "2048 AI Playground")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -41,5 +39,5 @@ pub enum Commands {
         /// Learning rate
         #[arg(short = 'r', long, default_value_t = 0.001)]
         learning_rate: f32,
-    }
+    },
 }
