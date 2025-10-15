@@ -9,9 +9,9 @@ mod tests;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct GameState<const N: usize> {
-    // 0 means empty square
+    // 0 means empty square; n>0 means 2<<n
     // u32 should be fine; I don't believe it's possible to overflow 18 bits in a 16 square grid
-    grid: [[u32; N]; N],
+    grid: [[u8; N]; N],
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -39,7 +39,7 @@ impl<const N: usize> GameState<N> {
     }
 
     #[inline(always)]
-    pub fn get_val(&self, x: usize, y: usize) -> u32 {
+    pub fn get_val(&self, x: usize, y: usize) -> u8 {
         self.grid[y][x]
     }
 
@@ -70,7 +70,7 @@ impl<const N: usize> GameState<N> {
                         out.grid[y][new_x + 1] = 0;
                     } else if out.grid[y][new_x] == val {
                         // merge; do the merge and stop the train
-                        out.grid[y][new_x] = val << 1;
+                        out.grid[y][new_x] = val + 1;
                         out.grid[y][new_x + 1] = 0;
                         merge_limits[y] = new_x + 1;
                         break;
@@ -118,7 +118,7 @@ impl<const N: usize> GameState<N> {
                         out.grid[new_y][x] = val;
                         out.grid[new_y + 1][x] = 0;
                     } else if out.grid[new_y][x] == val {
-                        out.grid[new_y][x] = val << 1;
+                        out.grid[new_y][x] = val + 1;
                         out.grid[new_y + 1][x] = 0;
                         merge_limits[x] = new_y + 1;
                         break;
@@ -168,7 +168,7 @@ impl<const N: usize> GameState<N> {
                         out.grid[y][new_x - 1] = 0;
                     } else if out.grid[y][new_x] == val {
                         // merge; do the merge and stop the train
-                        out.grid[y][new_x] = val << 1;
+                        out.grid[y][new_x] = val + 1;
                         out.grid[y][new_x - 1] = 0;
                         merge_limits[y] = new_x - 1;
                         break;
@@ -216,7 +216,7 @@ impl<const N: usize> GameState<N> {
                         out.grid[new_y][x] = val;
                         out.grid[new_y - 1][x] = 0;
                     } else if out.grid[new_y][x] == val {
-                        out.grid[new_y][x] = val << 1;
+                        out.grid[new_y][x] = val + 1;
                         out.grid[new_y - 1][x] = 0;
                         merge_limits[x] = new_y - 1;
                         break;
@@ -271,7 +271,7 @@ impl<const N: usize> FullGame for GameState<N> {
     }
 
     fn current_score(&self) -> u32 {
-        self.grid.iter().flat_map(|row| row.iter()).sum()
+        self.grid.iter().flat_map(|row| row.iter()).map(|bits| 1_u32 << bits).sum()
     }
 }
 
@@ -309,7 +309,7 @@ impl<const N: usize> AddRandomPiece<GameState<N>> for RngPlacement {
         let is_two = self.rng.random_bool(0.5);
 
         let mut out_state = *in_state;
-        out_state.grid[y][x] = if is_two { 2 } else { 4 };
+        out_state.grid[y][x] = if is_two { 1 } else { 2 };
 
         out_state
     }

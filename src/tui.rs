@@ -25,6 +25,7 @@ pub fn render<const N: usize>(game: &GameState<N>) -> io::Result<()> {
         for y in 0..N {
             for x in 0..N {
                 let val = game.get_val(x, y);
+                let val = if val == 0 { 0 } else { 1_u32 << val };
                 let color = match val {
                     0 => Color::DarkGrey,
                     2 => Color::Grey,
@@ -114,6 +115,11 @@ pub fn play<const N: usize>(seed: Option<u64>) -> io::Result<()> {
         cursor::Show,
         terminal::LeaveAlternateScreen
     )?;
+
+    render(&game)?;
+
+    println!("\r\nGame over! Final score: {}\n", game.current_score());
+
     terminal::disable_raw_mode()?;
 
     Ok(())
