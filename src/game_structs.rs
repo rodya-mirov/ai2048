@@ -264,14 +264,26 @@ impl<const N: usize> FullGame for GameState<N> {
         Ok(next_state)
     }
 
+    // TODO: unit test
+    fn is_legal_move(&self, m: Move) -> bool {
+        self != &match m {
+            Move::Left => self.left(),
+            Move::Right => self.right(),
+            Move::Up => self.up(),
+            Move::Down => self.down(),
+        }
+    }
+
+    // TODO: unit test
     fn is_finished(&self) -> bool {
         self.grid
             .iter()
             .all(|row| row.iter().all(|&cell| cell != 0))
     }
 
+    // TODO: unit test
     fn current_score(&self) -> u32 {
-        self.grid.iter().flat_map(|row| row.iter()).map(|bits| 1_u32 << bits).sum()
+        self.grid.iter().flat_map(|row| row.iter()).copied().filter(|&c| c > 0).map(|bits| 1_u32 << bits).sum()
     }
 }
 

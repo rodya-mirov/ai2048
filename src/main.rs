@@ -1,9 +1,14 @@
-use std::io;
-use clap::Parser;
 use crate::cli::{Cli, Commands};
+use crate::model_structs::PolicyNet;
+use burn::backend::NdArray;
+use clap::Parser;
+use std::io;
 
 mod game_structs;
 mod game_traits;
+
+mod model_structs;
+mod model_traits;
 
 mod cli;
 mod tui;
@@ -21,6 +26,17 @@ fn main() -> io::Result<()> {
             }
 
             tui::play::<4>(seed)?;
+        }
+        
+        Commands::AutoPlay { seed } => {
+            println!("Starting automatic 2048...");
+            if let Some (s) = seed {
+                println!("Using PRNG seed {s}");
+            }
+
+            let model: PolicyNet<4, NdArray> = PolicyNet::new();
+
+            tui::simulate::<4>(seed, &model)?;
         }
 
         Commands::Train { iterations, output, learning_rate } => {

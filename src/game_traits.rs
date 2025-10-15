@@ -5,6 +5,9 @@ pub trait FullGame: Sized {
     /// Returns an error if the move is invalid (results in no moves)
     fn apply_move<R: AddRandomPiece<Self>>(&self, m: Move, r: &mut R) -> Result<Self, MoveError>;
 
+    /// Quickly determine if the move is legal
+    fn is_legal_move(&self, m: Move) -> bool;
+
     /// Check if the game is finished (no legal moves / all squares full)
     fn is_finished(&self) -> bool;
 

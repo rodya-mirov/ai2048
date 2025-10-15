@@ -21,6 +21,13 @@ pub enum Commands {
         seed: Option<u64>,
     },
 
+    /// Play the game automatically in the terminal, using an untrained model
+    AutoPlay {
+        /// Optional seed for the PRNG
+        #[arg(short, long)]
+        seed: Option<u64>,
+    },
+
     /// Indicate we want to train a new model
     Train {
         /// Number of training iterations

@@ -4,6 +4,9 @@
 //! part of the project.
 use crate::game_structs::{GameState, Move, RngPlacement};
 use crate::game_traits::FullGame;
+use crate::model_structs::PolicyNet;
+use crate::model_traits::Model;
+use burn::backend::NdArray;
 use crossterm::event::{Event, KeyCode};
 use crossterm::{
     cursor, execute,
@@ -107,6 +110,67 @@ pub fn play<const N: usize>(seed: Option<u64>) -> io::Result<()> {
                     }
                 }
             }
+    }
+
+    // cleanup
+    execute!(
+        stdout,
+        cursor::Show,
+        terminal::LeaveAlternateScreen
+    )?;
+
+    render(&game)?;
+
+    println!("\r\nGame over! Final score: {}\n", game.current_score());
+
+    terminal::disable_raw_mode()?;
+
+    Ok(())
+}
+
+pub fn simulate<const N: usize>(seed: Option<u64>, model: &PolicyNet<N, NdArray>) -> io::Result<()> {
+    let mut rng = match seed {
+        Some(seed) => RngPlacement::new_from_seed(seed),
+        None => RngPlacement::new()
+    };
+    let mut game = GameState::new_random(&mut rng);
+
+    // prepare terminal
+    terminal::enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(
+        stdout,
+        terminal::EnterAlternateScreen,
+        cursor::Hide
+    )?;
+
+    let mut wrong_moves = vec![];
+
+    render(&game)?;
+
+    loop {
+        std::thread::sleep(Duration::from_millis(300));
+
+        let next_move = model.get_next_move(&game);
+
+        if let Ok(new_state) = game.apply_move(next_move, &mut rng) {
+            game = new_state;
+            wrong_moves.clear();
+        } else {
+            wrong_moves.push(next_move);
+        }
+
+        render(&game)?;
+
+        if !wrong_moves.is_empty() {
+            let message = format!("\r\nWrong moves: {wrong_moves:?}");
+            execute!(stdout, Print(message.as_str()))?;
+        }
+
+        if game.is_finished() {
+            execute!(stdout, Print("\r\nGame over!"))?;
+            break;
+        }
     }
 
     // cleanup
