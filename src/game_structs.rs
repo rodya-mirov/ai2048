@@ -15,6 +15,8 @@ pub struct GameState<const N: usize> {
     // 0 means empty square; n>0 means 2<<n
     // u32 should be fine; I don't believe it's possible to overflow 18 bits in a 16 square grid
     grid: [[u8; N]; N],
+    // current score (no tricks, this is the actual score)
+    current_score: u32,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -33,7 +35,10 @@ pub enum MoveError {
 
 impl<const N: usize> GameState<N> {
     pub fn new_empty() -> Self {
-        Self { grid: [[0; N]; N] }
+        Self {
+            grid: [[0; N]; N],
+            current_score: 0,
+        }
     }
 
     pub fn new_random<R: AddRandomPiece<Self>>(r: &mut R) -> Self {
@@ -74,6 +79,7 @@ impl<const N: usize> GameState<N> {
                     } else if out.grid[y][new_x] == val {
                         // merge; do the merge and stop the train
                         out.grid[y][new_x] = val + 1;
+                        out.current_score += 1 << (val + 1);
                         out.grid[y][new_x + 1] = 0;
                         merge_limits[y] = new_x + 1;
                         break;
@@ -122,6 +128,7 @@ impl<const N: usize> GameState<N> {
                         out.grid[new_y + 1][x] = 0;
                     } else if out.grid[new_y][x] == val {
                         out.grid[new_y][x] = val + 1;
+                        out.current_score += 1 << (val + 1);
                         out.grid[new_y + 1][x] = 0;
                         merge_limits[x] = new_y + 1;
                         break;
@@ -172,6 +179,7 @@ impl<const N: usize> GameState<N> {
                     } else if out.grid[y][new_x] == val {
                         // merge; do the merge and stop the train
                         out.grid[y][new_x] = val + 1;
+                        out.current_score += 1 << (val + 1);
                         out.grid[y][new_x - 1] = 0;
                         merge_limits[y] = new_x - 1;
                         break;
@@ -220,6 +228,7 @@ impl<const N: usize> GameState<N> {
                         out.grid[new_y - 1][x] = 0;
                     } else if out.grid[new_y][x] == val {
                         out.grid[new_y][x] = val + 1;
+                        out.current_score += 1 << (val + 1);
                         out.grid[new_y - 1][x] = 0;
                         merge_limits[x] = new_y - 1;
                         break;
@@ -273,20 +282,12 @@ impl<const N: usize> FullGame for GameState<N> {
         }
     }
 
-    // TODO: unit test
     fn is_finished(&self) -> bool {
         self.grid.iter().all(|row| row.iter().all(|&cell| cell != 0))
     }
 
-    // TODO: unit test
     fn current_score(&self) -> u32 {
-        self.grid
-            .iter()
-            .flat_map(|row| row.iter())
-            .copied()
-            .filter(|&c| c > 0)
-            .map(|bits| 1_u32 << bits)
-            .sum()
+        self.current_score
     }
 }
 

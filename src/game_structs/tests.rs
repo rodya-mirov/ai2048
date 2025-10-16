@@ -1,3 +1,6 @@
+// used to make tests more clear (adding zero is semantically meaningful even if it has no effect)
+#![allow(clippy::identity_op)]
+
 use crate::game_structs::GameState;
 use crate::game_structs::Move;
 use crate::game_structs::RngPlacement;
@@ -19,7 +22,7 @@ struct FirstPlaceTwos {}
 
 impl<const N: usize> AddRandomPiece<GameState<N>> for FirstPlaceTwos {
     fn next_piece(&mut self, in_state: &GameState<N>) -> GameState<N> {
-        let mut out = in_state.clone();
+        let mut out = *in_state;
 
         for y in 0..N {
             for x in 0..N {
@@ -41,7 +44,7 @@ struct FirstPlaceFours {}
 
 impl<const N: usize> AddRandomPiece<GameState<N>> for FirstPlaceFours {
     fn next_piece(&mut self, in_state: &GameState<N>) -> GameState<N> {
-        let mut out = in_state.clone();
+        let mut out = *in_state;
 
         for y in 0..N {
             for x in 0..N {
@@ -58,9 +61,18 @@ impl<const N: usize> AddRandomPiece<GameState<N>> for FirstPlaceFours {
 }
 
 fn boring_grid() -> GameState<5> {
-    GameState {
-        grid: [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 2, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]],
-    }
+    #[rustfmt::skip]
+    let out = GameState {
+        grid: [
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 2, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0]
+        ],
+        current_score: 12,
+    };
+    out
 }
 
 fn crowded_grid_a() -> GameState<4> {
@@ -72,6 +84,7 @@ fn crowded_grid_a() -> GameState<4> {
             [3, 2, 2, 2],
             [4, 2, 3, 2],
         ],
+        current_score: 12,
     };
 
     out
@@ -86,6 +99,7 @@ fn crowded_grid_b() -> GameState<4> {
             [3, 0, 0, 3],    // two far-apart merges possible
             [4, 3, 3, 3],   // only one merge allowed (8+8 once)
         ],
+        current_score: 16,
     };
 
     out
@@ -100,6 +114,7 @@ fn crowded_grid_c() -> GameState<4> {
             [2, 3, 4, 2],
             [2, 0, 0, 2],
         ],
+        current_score: 128,
     };
 
     out
@@ -116,6 +131,7 @@ fn crowded_grid_d() -> GameState<6> {
             [0, 0, 3, 3, 3, 0],
             [1, 2, 3, 4, 5, 6],
         ],
+        current_score: 0,
     };
 
     out
@@ -138,6 +154,7 @@ fn test_move_left_boring() {
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
         ],
+        current_score: 12,
     };
 
     assert_eq!(actual, expected);
@@ -149,6 +166,8 @@ fn test_move_left_crowded_a() {
 
     let start = crowded_grid_a();
 
+    assert_eq!(start.current_score(), 12, "grid A starts with 12 points");
+
     let actual = start.apply_move(Move::Left, &mut rng).unwrap();
 
     #[rustfmt::skip]
@@ -159,6 +178,7 @@ fn test_move_left_crowded_a() {
             [3, 3, 2, 0],
             [4, 2, 3, 2],
         ],
+        current_score: 12+4+4+8,
     };
 
     assert_eq!(actual, expected);
@@ -170,6 +190,8 @@ fn test_move_left_crowded_b() {
 
     let start = crowded_grid_b();
 
+    assert_eq!(start.current_score(), 16, "grid B starts with 16 points");
+
     let actual = start.apply_move(Move::Left, &mut rng).unwrap();
 
     #[rustfmt::skip]
@@ -180,6 +202,7 @@ fn test_move_left_crowded_b() {
             [4, 0, 0, 0],
             [4, 4, 3, 0]
         ],
+        current_score: 16+4+8+16+16,
     };
 
     assert_eq!(actual, expected);
@@ -191,6 +214,8 @@ fn test_move_left_crowded_c() {
 
     let start = crowded_grid_c();
 
+    assert_eq!(start.current_score(), 128, "grid C starts with 128 points");
+
     let actual = start.apply_move(Move::Left, &mut rng).unwrap();
 
     #[rustfmt::skip]
@@ -201,6 +226,7 @@ fn test_move_left_crowded_c() {
             [2, 3, 4, 2],
             [3, 0, 0, 0],
         ],
+        current_score: 128+8,
     };
 
     assert_eq!(actual, expected);
@@ -211,6 +237,8 @@ fn test_move_left_crowded_d() {
     let mut rng = NoPlacement {};
 
     let start = crowded_grid_d();
+
+    assert_eq!(start.current_score(), 0, "grid D starts with 0 points");
 
     let actual = start.apply_move(Move::Left, &mut rng).unwrap();
 
@@ -224,6 +252,7 @@ fn test_move_left_crowded_d() {
             [4, 3, 0, 0, 0, 0],
             [1, 2, 3, 4, 5, 6],
         ],
+        current_score: 4+8+4+32+8+16,
     };
 
     assert_eq!(actual, expected);
@@ -246,6 +275,7 @@ fn test_move_right_boring() {
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
         ],
+        current_score: 12,
     };
 
     assert_eq!(actual, expected);
@@ -258,6 +288,8 @@ fn test_move_right_crowded_a() {
     let start = crowded_grid_a();
     let actual = start.apply_move(Move::Right, &mut rng).unwrap();
 
+    assert_eq!(start.current_score(), 12, "grid A starts with 12 points");
+
     #[rustfmt::skip]
     let expected = GameState {
         grid: [
@@ -266,6 +298,7 @@ fn test_move_right_crowded_a() {
             [0, 3, 2, 3],
             [4, 2, 3, 2]
         ],
+        current_score: 12+4+4+8,
     };
 
     assert_eq!(actual, expected);
@@ -278,6 +311,8 @@ fn test_move_right_crowded_b() {
     let start = crowded_grid_b();
     let actual = start.apply_move(Move::Right, &mut rng).unwrap();
 
+    assert_eq!(start.current_score(), 16, "grid B starts with 16 points");
+
     #[rustfmt::skip]
     let expected = GameState {
         grid: [
@@ -286,6 +321,7 @@ fn test_move_right_crowded_b() {
             [0, 0, 0, 4],
             [0, 4, 3, 4],
         ],
+        current_score: 16+4+8+16+16,
     };
 
     assert_eq!(actual, expected);
@@ -298,6 +334,8 @@ fn test_move_right_crowded_c() {
     let start = crowded_grid_c();
     let actual = start.apply_move(Move::Right, &mut rng).unwrap();
 
+    assert_eq!(start.current_score(), 128, "grid C starts with 128 points");
+
     #[rustfmt::skip]
     let expected = GameState {
         grid: [
@@ -306,6 +344,7 @@ fn test_move_right_crowded_c() {
             [2, 3, 4, 2],
             [0, 0, 0, 3],
         ],
+        current_score: 128+8,
     };
 
     assert_eq!(actual, expected);
@@ -316,6 +355,9 @@ fn test_move_right_crowded_d() {
     let mut rng = NoPlacement {};
 
     let start = crowded_grid_d();
+
+    assert_eq!(start.current_score(), 0, "grid D starts with 0 points");
+
     let actual = start.apply_move(Move::Right, &mut rng).unwrap();
 
     #[rustfmt::skip]
@@ -328,6 +370,7 @@ fn test_move_right_crowded_d() {
             [0, 0, 0, 0, 3, 4],
             [1, 2, 3, 4, 5, 6],
         ],
+        current_score: 0+4+8+4+8+32+16,
     };
 
     assert_eq!(actual, expected);
@@ -350,6 +393,7 @@ fn test_move_up_boring() {
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
         ],
+        current_score: 12,
     };
 
     assert_eq!(actual, expected);
@@ -363,6 +407,8 @@ fn test_move_up_crowded_a() {
 
     let actual = start.apply_move(Move::Up, &mut rng).unwrap();
 
+    assert_eq!(start.current_score(), 12, "grid A starts with 12 points");
+
     #[rustfmt::skip]
     let expected = GameState {
         grid: [
@@ -371,6 +417,7 @@ fn test_move_up_crowded_a() {
             [4, 2, 3, 0],
             [0, 0, 0, 0]
         ],
+        current_score: 12+4+4+8+8,
     };
 
     assert_eq!(actual, expected);
@@ -384,6 +431,8 @@ fn test_move_up_crowded_b() {
 
     let actual = start.apply_move(Move::Up, &mut rng).unwrap();
 
+    assert_eq!(start.current_score(), 16, "grid B starts with 16 points");
+
     #[rustfmt::skip]
     let expected = GameState {
         grid: [
@@ -392,6 +441,7 @@ fn test_move_up_crowded_b() {
             [4, 0, 3, 0],
             [0, 0, 0, 0],
         ],
+        current_score: 16+16,
     };
 
     assert_eq!(actual, expected);
@@ -403,6 +453,8 @@ fn test_move_up_crowded_c() {
 
     let start = crowded_grid_c();
 
+    assert_eq!(start.current_score(), 128, "grid C starts with 128 points");
+
     let actual = start.apply_move(Move::Up, &mut rng).unwrap();
 
     #[rustfmt::skip]
@@ -413,6 +465,7 @@ fn test_move_up_crowded_c() {
             [0, 0, 0, 0],
             [0, 0, 0, 0],
         ],
+        current_score: 128+4+8+8+16+4+8,
     };
 
     assert_eq!(actual, expected);
@@ -423,6 +476,8 @@ fn test_move_up_crowded_d() {
     let mut rng = NoPlacement {};
 
     let start = crowded_grid_d();
+
+    assert_eq!(start.current_score(), 0, "grid D starts with 0 points");
 
     let actual = start.apply_move(Move::Up, &mut rng).unwrap();
 
@@ -436,6 +491,7 @@ fn test_move_up_crowded_d() {
             [0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0],
         ],
+        current_score: 0+16+32+8+16+16,
     };
 
     assert_eq!(actual, expected);
@@ -449,8 +505,16 @@ fn test_move_down_boring() {
 
     let actual = start.apply_move(Move::Down, &mut rng).unwrap();
 
+    #[rustfmt::skip]
     let expected = GameState {
-        grid: [[1, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 2, 0, 0]],
+        grid: [
+            [1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 2, 0, 0]
+        ],
+        current_score: 12,
     };
 
     assert_eq!(actual, expected);
@@ -463,6 +527,8 @@ fn test_move_down_crowded_a() {
     let start = crowded_grid_a();
     let actual = start.apply_move(Move::Down, &mut rng).unwrap();
 
+    assert_eq!(start.current_score(), 12, "grid A starts with 12 points");
+
     #[rustfmt::skip]
     let expected = GameState {
         grid: [
@@ -471,6 +537,7 @@ fn test_move_down_crowded_a() {
             [3, 2, 2, 2],
             [4, 3, 3, 3],
         ],
+        current_score: 12+4+8+4+8,
     };
 
     assert_eq!(actual, expected);
@@ -483,6 +550,8 @@ fn test_move_down_crowded_b() {
     let start = crowded_grid_b();
     let actual = start.apply_move(Move::Down, &mut rng).unwrap();
 
+    assert_eq!(start.current_score(), 16, "grid B starts with 16 points");
+
     #[rustfmt::skip]
     let expected = GameState {
         grid: [
@@ -491,6 +560,7 @@ fn test_move_down_crowded_b() {
             [3, 2, 2, 1],
             [4, 3, 3, 4],
         ],
+        current_score: 16+16,
     };
 
     assert_eq!(actual, expected);
@@ -501,6 +571,9 @@ fn test_move_down_crowded_c() {
     let mut rng = NoPlacement {};
 
     let start = crowded_grid_c();
+
+    assert_eq!(start.current_score(), 128, "grid C starts with 128 points");
+
     let actual = start.apply_move(Move::Down, &mut rng).unwrap();
 
     #[rustfmt::skip]
@@ -511,6 +584,7 @@ fn test_move_down_crowded_c() {
             [2, 3, 4, 2],
             [3, 3, 4, 3],
         ],
+        current_score: 128+4+8+8+16+4+8,
     };
 
     assert_eq!(actual, expected);
@@ -521,6 +595,9 @@ fn test_move_down_crowded_d() {
     let mut rng = NoPlacement {};
 
     let start = crowded_grid_d();
+
+    assert_eq!(start.current_score(), 0, "grid D starts with 0 points");
+
     let actual = start.apply_move(Move::Down, &mut rng).unwrap();
 
     #[rustfmt::skip]
@@ -533,6 +610,7 @@ fn test_move_down_crowded_d() {
             [4, 5, 4, 4, 3, 2],
             [1, 2, 4, 4, 5, 6],
         ],
+        current_score: 0+16+32+8+16+16,
     };
 
     assert_eq!(actual, expected);
@@ -549,9 +627,13 @@ fn test_prng_pieces_on_new_places_only() {
 
     let mut state: GameState<N> = GameState::new_random(&mut rng);
 
+    assert_eq!(state.current_score(), 0, "Initial score should be zero");
+
     while !state.is_finished() {
-        let old_state = state.clone();
+        let old_state = state;
         state = rng.next_piece(&state);
+
+        assert_eq!(state.current_score(), 0, "Adding a piece should not affect the score");
 
         // check that if a square is occupied in old, it's the same value in new
         for y in 0..N {
