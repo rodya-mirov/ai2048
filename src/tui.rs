@@ -109,6 +109,7 @@ pub fn play<const N: usize>(seed: Option<u64>) -> io::Result<()> {
     render(&game)?;
 
     println!("\r\nGame over! Final score: {}\n", game.current_score());
+    println!("\r\n          Highest tile: {}\n", game.highest_tile());
 
     terminal::disable_raw_mode()?;
 
@@ -162,6 +163,7 @@ pub fn simulate<const N: usize>(seed: Option<u64>, model: &PolicyNet<N, NdArray>
     render(&game)?;
 
     println!("\r\nGame over! Final score: {}\n", game.current_score());
+    println!("\r\n          Highest tile: {}\n", game.highest_tile());
 
     terminal::disable_raw_mode()?;
 

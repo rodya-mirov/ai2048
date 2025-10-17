@@ -250,6 +250,17 @@ impl<const N: usize> GameState<N> {
 
         out
     }
+
+    // TODO: unit test
+    pub fn highest_tile(&self) -> u32 {
+        self.grid
+            .iter()
+            .flat_map(|row| row.iter().copied())
+            .filter(|&val| val != 0)
+            .map(|val| 1 << val)
+            .max()
+            .unwrap_or(0)
+    }
 }
 
 impl<const N: usize> FullGame for GameState<N> {
@@ -282,8 +293,14 @@ impl<const N: usize> FullGame for GameState<N> {
         }
     }
 
+    // TODO: unit test (including nearly-empty grid, full grid that is not locked, and full grid that is locked)
     fn is_finished(&self) -> bool {
-        self.grid.iter().all(|row| row.iter().all(|&cell| cell != 0))
+        for m in [Move::Left, Move::Right, Move::Up, Move::Down] {
+            if self.is_legal_move(m) {
+                return false;
+            }
+        }
+        true
     }
 
     fn current_score(&self) -> u32 {
