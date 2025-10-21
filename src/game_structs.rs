@@ -27,6 +27,26 @@ pub enum Move {
     Right,
 }
 
+impl Move {
+    pub fn to_idx(self) -> usize {
+        match self {
+            Move::Up => 0,
+            Move::Down => 1,
+            Move::Left => 2,
+            Move::Right => 3,
+        }
+    }
+
+    pub fn from_idx(idx: usize) -> Move {
+        match idx {
+            0 => Move::Up,
+            1 => Move::Down,
+            2 => Move::Left,
+            _ => Move::Right,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum MoveError {
     IllegalMove,

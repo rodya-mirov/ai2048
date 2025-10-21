@@ -6,7 +6,7 @@ use std::io;
 use std::io::Write;
 use std::time::Duration;
 
-use burn::backend::NdArray;
+use burn::prelude::Backend;
 use crossterm::cursor;
 use crossterm::event::Event;
 use crossterm::event::KeyCode;
@@ -116,7 +116,9 @@ pub fn play<const N: usize>(seed: Option<u64>) -> io::Result<()> {
     Ok(())
 }
 
-pub fn simulate<const N: usize>(seed: Option<u64>, model: &PolicyNet<N, NdArray>) -> io::Result<()> {
+// TODO: allow the user to hit Q to stop it early
+// TODO: some kind of display that it's a CPU autoplaying
+pub fn simulate<const N: usize, B: Backend>(seed: Option<u64>, model: &PolicyNet<N, B>, device: &B::Device) -> io::Result<()> {
     let mut rng = match seed {
         Some(seed) => RngPlacement::new_from_seed(seed),
         None => RngPlacement::new(),
@@ -135,7 +137,7 @@ pub fn simulate<const N: usize>(seed: Option<u64>, model: &PolicyNet<N, NdArray>
     loop {
         std::thread::sleep(Duration::from_millis(300));
 
-        let next_move = model.get_next_move(&game);
+        let next_move = model.get_next_move(&game, device);
 
         if let Ok(new_state) = game.apply_move(next_move, &mut rng) {
             game = new_state;

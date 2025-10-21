@@ -28,9 +28,21 @@ pub enum Commands {
 
     /// Indicate we want to train a new model
     Train {
-        /// Number of training iterations
-        #[arg(short, long, default_value_t = 1000)]
+        /// Number of training iterations (batches)
+        #[arg(short, long, default_value_t = 50)]
         iterations: usize,
+
+        /// Number of games per batch
+        #[arg(short, long, default_value_t = 5)]
+        games_per_batch: usize,
+
+        /// Number of learning steps per batch of training data
+        #[arg(short, long, default_value_t = 1)]
+        learning_steps_per_batch: usize,
+
+        /// Discount factor for reinforcement learning
+        #[arg(short, long, default_value_t = 0.99)]
+        discount_factor: f32,
 
         /// Path to save the trained model
         #[arg(short, long, default_value = "model.bin")]
@@ -38,6 +50,12 @@ pub enum Commands {
 
         /// Learning rate
         #[arg(short = 'r', long, default_value_t = 0.001)]
-        learning_rate: f32,
+        learning_rate: f64,
+
+        /// L2 regularization amount
+
+        /// Discount factor for reinforcement learning
+        #[arg(short, long, default_value_t = 0.0001)]
+        l2_reg: f32,
     },
 }

@@ -2,12 +2,15 @@
 
 use std::io;
 
+use burn::backend::Autodiff;
 use burn::backend::NdArray;
+use burn::backend::ndarray::NdArrayDevice;
 use clap::Parser;
 
 use crate::cli::Cli;
 use crate::cli::Commands;
 use crate::model_structs::PolicyNet;
+use crate::model_structs::PolicyNetConfig;
 
 mod game_structs;
 mod game_traits;
@@ -41,20 +44,38 @@ fn main() -> io::Result<()> {
                 println!("Using PRNG seed {s}");
             }
 
-            let model: PolicyNet<4, NdArray> = PolicyNet::new();
+            let device = NdArrayDevice::default();
+            let model: PolicyNet<4, NdArray> = PolicyNetConfig::new().init(&device);
 
-            tui::simulate::<4>(seed, &model)?;
+            tui::simulate(seed, &model, &device)?;
         }
 
         Commands::Train {
             iterations,
             output,
             learning_rate,
+            games_per_batch,
+            learning_steps_per_batch,
+            discount_factor,
+            l2_reg,
         } => {
             println!("Starting model training with {iterations} and learning rate of {learning_rate}");
             println!("Model will be saved in {output}");
 
-            unimplemented!()
+            let device = NdArrayDevice::default();
+            let mut model: PolicyNet<4, Autodiff<NdArray>> = PolicyNetConfig::new().init(&device);
+
+            training::train(
+                &mut model,
+                iterations,
+                learning_rate,
+                games_per_batch,
+                learning_steps_per_batch,
+                discount_factor,
+                l2_reg,
+            );
+
+            tui::simulate(None, &model, &device)?;
         }
     }
 
