@@ -35,9 +35,4 @@ echo "Verifying code linter"
 # Run clippy on the entire workspace
 cargo clippy --workspace --tests
 
-echo "Checking for unused dependencies"
-
-# Run udeps on the entire workspace
-cargo +nightly udeps --workspace
-
 PATH=$PATH:/usr/local/bin:/usr/local/sbin

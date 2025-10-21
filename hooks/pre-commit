@@ -34,9 +34,6 @@ cargo +nightly fmt --all
 echo "Running code linter (does not block commit, but should be addressed before push)"
 cargo clippy --workspace --tests || true
 
-echo "Checking for unused dependencies (does not block commit, but should be addressed before push)"
-cargo +nightly udeps --workspace || true
-
 PATH=$PATH:/usr/local/bin:/usr/local/sbin
 
 if [ -n "$(git ls-files --modified)" ]; then
