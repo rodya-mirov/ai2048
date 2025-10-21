@@ -1,3 +1,4 @@
+use std::time::Duration;
 use std::time::Instant;
 
 use burn::backend::Autodiff;
@@ -69,7 +70,7 @@ fn batchify<const N: usize>(batch: &[Reward<N, AD>], device: &<AD as Backend>::D
 
 pub fn train<const N: usize>(
     model: &mut PolicyNet<N, AD>,
-    num_batches: usize,
+    max_time_sec: usize,
     lr: f64,
     games_per_batch: usize,
     learning_steps_per_batch: usize,
@@ -82,8 +83,12 @@ pub fn train<const N: usize>(
         .init::<AD, InnerModel<AD>>();
 
     let start_time = Instant::now();
+    let end_time = start_time + Duration::from_secs(max_time_sec as u64);
 
-    for batch_idx in 1..=num_batches {
+    let mut batch_idx = 0;
+    while Instant::now() < end_time {
+        batch_idx += 1;
+
         let batch_start_time = Instant::now();
 
         // 1) Collect experience
@@ -103,38 +108,45 @@ pub fn train<const N: usize>(
 
         let (mean_score, stddev_score) = mean_stddev(&final_scores);
 
-        // 2) Compute discounted returns per-episode
-        // (this is already done)
+        // 2-4) Batchify results into tensors so we can work with them correctly, and normalize
+        let BatchifyResult {
+            x,
+            returns: non_normalized_returns,
+            actions,
+        } = batchify(&batch, &device);
+        let normalized_returns = normalize(non_normalized_returns.clone());
 
-        // 3) normalize across the entire batch
-        normalize_rewards(&mut batch);
-
-        // 4) Build tensors
-        let mut last_loss = 0.0;
-
-        let BatchifyResult { x, returns, actions } = batchify(&batch, &device);
+        // mean advantage -- only used for debug output, to see how the critic is doing
+        let mut adv_mean = 0.0;
 
         let learning_start = Instant::now();
 
         for _ in 0..learning_steps_per_batch {
             // 5) Forward application to get logits, then logit probabilities
-            let logits = model.get_output_tensor(x.clone()); // [B, 4]
-            let log_props = log_softmax(logits, 1); // [B, 4]
+            let (actor_logits, critic_value) = model.get_output_tensor(x.clone()); // [B, 4]
+            let log_props = log_softmax(actor_logits, 1); // [B, 4]
 
             // 6) Select log p(a_t|s_t) for taken actions
             //      gather expects indices shape to match the gather result; expand to [B, 1], then squeeze
             let idx: Tensor<AD, 2, Int> = actions.clone().unsqueeze_dim(1); // Shape [B, 1] (Int)
-            let chosen_log_p = log_props.gather(1, idx).squeeze::<1>(1); // TODO: what on earth is this doing
+            let chosen_log_p = log_props.clone().gather(1, idx).squeeze::<1>(1); // TODO: what on earth is this doing
+
+            let advantages = non_normalized_returns.clone() - critic_value.squeeze::<1>(1);
+            adv_mean = advantages.clone().mean().to_data().into_vec::<f32>().unwrap()[0];
+            // ensures we're at norm 1, sort of, so that returns and advantages are at approximately the same scale
+            let advantages = advantages.clone() / (advantages.var(0).sqrt() + EPSILON);
 
             // 7) Reinforce loss: -(log pi * returns).mean()
-            let loss: Tensor<AD, 1> = -(chosen_log_p * returns.clone()).mean();
+            let actor_loss: Tensor<AD, 1> = -(chosen_log_p * normalized_returns.clone()).mean();
+            let critic_loss: Tensor<AD, 1> = advantages.clone().powf_scalar(2.0).mean();
+            let entropy = -((log_props.clone().exp() * log_props).sum_dim(1)).mean();
+
+            let loss: Tensor<AD, 1> = actor_loss.clone() + 0.25 * critic_loss - 0.01 * entropy;
 
             // 8) Backprop + step
             let grads = loss.backward();
             let grads = GradientsParams::from_grads::<AD, _>(grads, &model.inner);
             model.inner = opt.step(lr, model.inner.clone(), grads);
-
-            last_loss = loss.to_data().into_vec::<f32>().unwrap()[0];
         }
 
         let learning_elapsed = learning_start.elapsed().as_secs_f64();
@@ -143,7 +155,7 @@ pub fn train<const N: usize>(
         let total_elapsed = start_time.elapsed().as_secs_f64();
 
         // (Optional) diagnostics
-        println!("batch {batch_idx:>5} | loss={last_loss} | mean_score={mean_score:.2} | score_std={stddev_score:.2}");
+        println!("batch {batch_idx:>5} | adv_mean={adv_mean:0.3} | mean_score={mean_score:.2} | score_std={stddev_score:.2}");
         println!(
             "    Timing: Play time {:0.3} sec | learning {:0.3} sec | Total (batch) {:0.3} sec | Total (all) {:0.3} sec",
             play_elapsed, learning_elapsed, batch_elapsed, total_elapsed
@@ -151,18 +163,10 @@ pub fn train<const N: usize>(
     }
 }
 
-/// Applies mean/stddev normalization across the entire training batch
-fn normalize_rewards<const N: usize, B: Backend>(reward_batch: &mut [Reward<N, B>]) {
-    // TODO: unit test this section frfr; I'm pretty sure this is right but again it's typo fodder
-    let mut rewards_vec: Vec<f32> = reward_batch.iter().map(|x| x.reward).collect();
-    let (mean, stddev) = mean_stddev(&rewards_vec);
-    for reward in rewards_vec.iter_mut() {
-        *reward = (*reward - mean) / (stddev + EPSILON);
-    }
+fn normalize<B: Backend>(tensor: Tensor<B, 1>) -> Tensor<B, 1> {
+    let (var, mean) = tensor.clone().var_mean(0);
 
-    for (reward, normalized) in reward_batch.iter_mut().zip(rewards_vec.into_iter()) {
-        reward.reward = normalized;
-    }
+    (tensor - mean) / (var.sqrt() + EPSILON)
 }
 
 /// Returns rewards for a single game with the given model. These are discounted (that is, credit
@@ -179,8 +183,8 @@ fn simulate_one_game<const N: usize, B: Backend>(
 
     while !game_state.is_finished() {
         let input_tensor = model.input_to_tensor(&game_state, device);
-        let output_tensor = model.get_output_tensor(input_tensor.clone());
-        let next_move = model.get_move_from_output(&game_state, output_tensor.clone());
+        let (actor_logits, _critic_value) = model.get_output_tensor(input_tensor.clone());
+        let next_move = model.get_move_from_output(&game_state, actor_logits.clone());
 
         let new_game_state = game_state
             .apply_move(next_move, &mut prng)

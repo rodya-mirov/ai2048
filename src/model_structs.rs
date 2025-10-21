@@ -20,9 +20,15 @@ impl PolicyNetConfig {
         PolicyNet {
             inner: InnerModel {
                 // note: this does a good job initializing these things
-                linear1: LinearConfig::new(N * N, N * N * N).init(device),
-                linear2: LinearConfig::new(N * N * N, N * N * N).init(device),
-                linear3: LinearConfig::new(N * N * N, 4).init(device),
+                // shared portion
+                linear1: LinearConfig::new(N * N, N * N * N * N).init(device),
+                linear2: LinearConfig::new(N * N * N * N, N * N * N * N).init(device),
+
+                // head-specific portions
+                actor_head: LinearConfig::new(N * N * N * N, 4).init(device),
+                critic_head: LinearConfig::new(N * N * N * N, 1).init(device),
+
+                // not sure why we even need this
                 activation: Relu::new(),
             },
         }
@@ -35,22 +41,32 @@ pub struct PolicyNet<const N: usize, B: Backend> {
 
 #[derive(Module, Debug)]
 pub struct InnerModel<B: Backend> {
+    // shared portion
     linear1: Linear<B>,
     linear2: Linear<B>,
-    linear3: Linear<B>,
+
+    // actor portion
+    actor_head: Linear<B>,
+
+    // critic portion
+    critic_head: Linear<B>,
+
+    // used between all layers
     activation: Relu,
 }
 
 impl<B: Backend> InnerModel<B> {
-    fn forward<const D: usize>(&self, x: Tensor<B, D>) -> Tensor<B, D> {
+    /// Forward application of the network, yielding (actor_output, critic_output)
+    fn forward<const D: usize>(&self, x: Tensor<B, D>) -> (Tensor<B, D>, Tensor<B, D>) {
         let x = self.linear1.forward(x);
         let x = self.activation.forward(x);
         let x = self.linear2.forward(x);
-        let x = self.activation.forward(x);
-        let x = self.linear3.forward(x);
-        let x = self.activation.forward(x);
+        let shared = self.activation.forward(x);
 
-        x
+        let actor_logits = self.actor_head.forward(shared.clone()); // [B, 4]
+        let critic_value = self.critic_head.forward(shared); // [B, 1]
+
+        (actor_logits, critic_value)
     }
 }
 
@@ -68,7 +84,7 @@ impl<const N: usize, B: Backend> Model<N, B> for PolicyNet<N, B> {
         input
     }
 
-    fn get_output_tensor<const D: usize>(&self, input: Tensor<B, D>) -> Tensor<B, D> {
+    fn get_output_tensor<const D: usize>(&self, input: Tensor<B, D>) -> (Tensor<B, D>, Tensor<B, D>) {
         self.inner.forward(input)
     }
 

@@ -51,7 +51,7 @@ fn main() -> io::Result<()> {
         }
 
         Commands::Train {
-            iterations,
+            max_time,
             output,
             learning_rate,
             games_per_batch,
@@ -59,7 +59,7 @@ fn main() -> io::Result<()> {
             discount_factor,
             l2_reg,
         } => {
-            println!("Starting model training with {iterations} and learning rate of {learning_rate}");
+            println!("Starting model training");
             println!("Model will be saved in {output}");
 
             let device = NdArrayDevice::default();
@@ -67,7 +67,7 @@ fn main() -> io::Result<()> {
 
             training::train(
                 &mut model,
-                iterations,
+                max_time,
                 learning_rate,
                 games_per_batch,
                 learning_steps_per_batch,

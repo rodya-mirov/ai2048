@@ -28,9 +28,9 @@ pub enum Commands {
 
     /// Indicate we want to train a new model
     Train {
-        /// Number of training iterations (batches)
-        #[arg(short, long, default_value_t = 50)]
-        iterations: usize,
+        /// Max training time (seconds)
+        #[arg(short, long, default_value_t = 180)]
+        max_time: usize,
 
         /// Number of games per batch
         #[arg(short, long, default_value_t = 5)]
