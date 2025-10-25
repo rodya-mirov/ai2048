@@ -28,6 +28,8 @@ mod tui;
 fn main() -> io::Result<()> {
     let cli = Cli::parse();
 
+    println!("Received command {:?}", cli.command);
+
     match cli.command {
         Commands::Play { seed } => {
             println!("Starting interactive 2048...");

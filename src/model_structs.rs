@@ -11,6 +11,7 @@ use crate::game_structs::GameState;
 use crate::game_structs::Move;
 use crate::game_traits::FullGame;
 use crate::model_traits::Model;
+use crate::model_traits::MoveResult;
 
 #[derive(Config, Debug)]
 pub struct PolicyNetConfig {}
@@ -21,7 +22,7 @@ impl PolicyNetConfig {
             inner: InnerModel {
                 // note: this does a good job initializing these things
                 // shared portion
-                linear1: LinearConfig::new(N * N, N * N * N * N).init(device),
+                linear1: LinearConfig::new(N * N * NUM_POSSIBLE_STATES_PER_CELL, N * N * N * N).init(device),
                 linear2: LinearConfig::new(N * N * N * N, N * N * N * N).init(device),
 
                 // head-specific portions
@@ -70,12 +71,21 @@ impl<B: Backend> InnerModel<B> {
     }
 }
 
+pub const NUM_POSSIBLE_STATES_PER_CELL: usize = 18;
+
 impl<const N: usize, B: Backend> Model<N, B> for PolicyNet<N, B> {
     fn input_to_tensor(&self, state: &GameState<N>, device: &B::Device) -> Tensor<B, 1> {
-        let mut inputs: Vec<f32> = Vec::with_capacity(N * N);
+        let mut inputs: Vec<f32> = Vec::with_capacity(N * N * NUM_POSSIBLE_STATES_PER_CELL);
         for y in 0..N {
             for x in 0..N {
-                inputs.push(state.get_val(x, y) as f32);
+                let actual_val = state.get_val(x, y);
+                for val in 0..(NUM_POSSIBLE_STATES_PER_CELL as u8) {
+                    if val == actual_val {
+                        inputs.push(1.0);
+                    } else {
+                        inputs.push(0.0);
+                    }
+                }
             }
         }
 
@@ -88,16 +98,23 @@ impl<const N: usize, B: Backend> Model<N, B> for PolicyNet<N, B> {
         self.inner.forward(input)
     }
 
-    fn get_move_from_output(&self, state: &GameState<N>, output: Tensor<B, 1>) -> Move {
+    fn get_move_from_output(&self, state: &GameState<N>, output: Tensor<B, 1>) -> MoveResult {
         let row: Vec<f32> = output.into_data().into_vec().expect("Should be able to convert to vec");
 
         let mut row_idxes: Vec<(usize, f32)> = row.into_iter().enumerate().collect();
         row_idxes.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap().reverse());
 
+        let mut num_illegal_choices = 0;
+
         for (ind, _weight) in row_idxes {
             let next_move = Move::from_idx(ind);
             if state.is_legal_move(next_move) {
-                return next_move;
+                return MoveResult {
+                    next_move,
+                    num_illegal_choices,
+                };
+            } else {
+                num_illegal_choices += 1;
             }
         }
 

@@ -18,6 +18,7 @@ use crate::game_traits::FullGame;
 use crate::model_structs::InnerModel;
 use crate::model_structs::PolicyNet;
 use crate::model_traits::Model;
+use crate::model_traits::MoveResult;
 
 pub struct Reward<const N: usize, B: Backend> {
     /// Game state that was acted on, in tensor form
@@ -26,6 +27,8 @@ pub struct Reward<const N: usize, B: Backend> {
     output: Move,
     /// Including discounted future rewards, then normalized
     reward: f32,
+    /// Local penalties; not discounted
+    penalty: f32,
 }
 
 fn mean_stddev(xs: &[f32]) -> (f32, f32) {
@@ -57,7 +60,7 @@ fn batchify<const N: usize>(batch: &[Reward<N, AD>], device: &<AD as Backend>::D
 
     for step in batch {
         xs.push(step.state.clone());
-        returns.push(step.reward);
+        returns.push(step.reward + step.penalty);
         actions.push(step.output.to_idx() as i32);
     }
 
@@ -104,17 +107,22 @@ pub fn train<const N: usize>(
             batch.extend(game_results);
         }
 
+        let mut total_penalty: Vec<f32> = Vec::new();
+        total_penalty.extend(batch.iter().map(|r| r.penalty));
+        let avg_illegal_moves = (total_penalty.iter().sum::<f32>() / total_penalty.len() as f32) / ILLEGAL_MOVE_PENALTY;
+
         let play_elapsed = play_start_time.elapsed().as_secs_f64();
 
         let (mean_score, stddev_score) = mean_stddev(&final_scores);
 
         // 2-4) Batchify results into tensors so we can work with them correctly, and normalize
+
         let BatchifyResult {
             x,
             returns: non_normalized_returns,
             actions,
         } = batchify(&batch, &device);
-        let normalized_returns = normalize(non_normalized_returns.clone());
+        // let normalized_returns = normalize(non_normalized_returns.clone());
 
         // mean advantage -- only used for debug output, to see how the critic is doing
         let mut adv_mean = 0.0;
@@ -133,11 +141,13 @@ pub fn train<const N: usize>(
 
             let advantages = non_normalized_returns.clone() - critic_value.squeeze::<1>(1);
             adv_mean = advantages.clone().mean().to_data().into_vec::<f32>().unwrap()[0];
+            // TODO: consider normalizing advantages as below
             // ensures we're at norm 1, sort of, so that returns and advantages are at approximately the same scale
-            let advantages = advantages.clone() / (advantages.var(0).sqrt() + EPSILON);
+            // let advantages = advantages.clone() / (advantages.var(0).sqrt() + EPSILON);
 
             // 7) Reinforce loss: -(log pi * returns).mean()
-            let actor_loss: Tensor<AD, 1> = -(chosen_log_p * normalized_returns.clone()).mean();
+            // TODO: consider changing this out for normalized returns
+            let actor_loss: Tensor<AD, 1> = -(chosen_log_p * non_normalized_returns.clone()).mean();
             let critic_loss: Tensor<AD, 1> = advantages.clone().powf_scalar(2.0).mean();
             let entropy = -((log_props.clone().exp() * log_props).sum_dim(1)).mean();
 
@@ -155,11 +165,14 @@ pub fn train<const N: usize>(
         let total_elapsed = start_time.elapsed().as_secs_f64();
 
         // (Optional) diagnostics
-        println!("batch {batch_idx:>5} | adv_mean={adv_mean:0.3} | mean_score={mean_score:.2} | score_std={stddev_score:.2}");
+        println!(
+            "batch {batch_idx:>5} | adv_mean={adv_mean:0.3} | avg_illegal_moves={avg_illegal_moves:0.3} | mean_score={mean_score:.2} | score_std={stddev_score:.2}"
+        );
         println!(
             "    Timing: Play time {:0.3} sec | learning {:0.3} sec | Total (batch) {:0.3} sec | Total (all) {:0.3} sec",
             play_elapsed, learning_elapsed, batch_elapsed, total_elapsed
         );
+        println!("    Batch finished at {}", chrono::Local::now());
     }
 }
 
@@ -168,6 +181,9 @@ fn normalize<B: Backend>(tensor: Tensor<B, 1>) -> Tensor<B, 1> {
 
     (tensor - mean) / (var.sqrt() + EPSILON)
 }
+
+/// How much problem it is if you give an illegal move
+pub const ILLEGAL_MOVE_PENALTY: f32 = -1000.0;
 
 /// Returns rewards for a single game with the given model. These are discounted (that is, credit
 /// is sent backwards across time) but not normalized, which should be done per batch.
@@ -184,7 +200,10 @@ fn simulate_one_game<const N: usize, B: Backend>(
     while !game_state.is_finished() {
         let input_tensor = model.input_to_tensor(&game_state, device);
         let (actor_logits, _critic_value) = model.get_output_tensor(input_tensor.clone());
-        let next_move = model.get_move_from_output(&game_state, actor_logits.clone());
+        let MoveResult {
+            next_move,
+            num_illegal_choices,
+        } = model.get_move_from_output(&game_state, actor_logits.clone());
 
         let new_game_state = game_state
             .apply_move(next_move, &mut prng)
@@ -196,6 +215,7 @@ fn simulate_one_game<const N: usize, B: Backend>(
             state: input_tensor,
             output: next_move,
             reward,
+            penalty: (num_illegal_choices as f32) * ILLEGAL_MOVE_PENALTY,
         });
 
         game_state = new_game_state;

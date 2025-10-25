@@ -12,12 +12,19 @@ pub trait Model<const N: usize, B: Backend> {
     fn get_output_tensor<const D: usize>(&self, input: Tensor<B, D>) -> (Tensor<B, D>, Tensor<B, D>);
 
     /// Given an output tensor, compute the move it corresponds to
-    fn get_move_from_output(&self, state: &GameState<N>, output: Tensor<B, 1>) -> Move;
+    fn get_move_from_output(&self, state: &GameState<N>, output: Tensor<B, 1>) -> MoveResult;
 
-    fn get_next_move(&self, state: &GameState<N>, device: &B::Device) -> Move {
+    fn get_next_move(&self, state: &GameState<N>, device: &B::Device) -> MoveResult {
         let input_tensor = self.input_to_tensor(state, device);
         let (actor_logits, _critic_value) = self.get_output_tensor(input_tensor);
         let next_move = self.get_move_from_output(state, actor_logits);
         next_move
     }
+}
+
+pub struct MoveResult {
+    pub next_move: Move,
+    // if the first choice was illegal but the second was legal, this is 1
+    // values go from zero to three
+    pub num_illegal_choices: u8,
 }

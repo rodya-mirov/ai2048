@@ -24,6 +24,7 @@ use crate::game_structs::RngPlacement;
 use crate::game_traits::FullGame;
 use crate::model_structs::PolicyNet;
 use crate::model_traits::Model;
+use crate::model_traits::MoveResult;
 
 pub fn render<const N: usize>(game: &GameState<N>) -> io::Result<()> {
     let mut stdout = io::stdout();
@@ -137,7 +138,7 @@ pub fn simulate<const N: usize, B: Backend>(seed: Option<u64>, model: &PolicyNet
     loop {
         std::thread::sleep(Duration::from_millis(150));
 
-        let next_move = model.get_next_move(&game, device);
+        let MoveResult { next_move, .. } = model.get_next_move(&game, device);
 
         if let Ok(new_state) = game.apply_move(next_move, &mut rng) {
             game = new_state;
